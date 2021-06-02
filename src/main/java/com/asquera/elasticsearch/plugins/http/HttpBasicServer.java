@@ -21,8 +21,8 @@ import org.elasticsearch.rest.RestRequest.Method;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Arrays;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.rest.RestStatus.UNAUTHORIZED;
@@ -37,6 +37,7 @@ import static org.elasticsearch.rest.RestStatus.UNAUTHORIZED;
 // # OR use beforeSend in  $.ajax({
 // http.cors.allow-headers: "X-Requested-With, Content-Type, Content-Length, Authorization"
 //
+
 /**
  * @author Florian Gilcher (florian.gilcher@asquera.de)
  * @author Peter Karich
@@ -50,22 +51,23 @@ public class HttpBasicServer extends HttpServer {
     private final String xForwardHeader;
     private final boolean log;
 
-    @Inject public HttpBasicServer(Settings settings, Environment environment, HttpServerTransport transport,
-            RestController restController,
-            NodeService nodeService) {
+    @Inject
+    public HttpBasicServer(Settings settings, Environment environment, HttpServerTransport transport,
+                           RestController restController,
+                           NodeService nodeService) {
         super(settings, environment, transport, restController, nodeService);
 
         this.user = settings.get("http.basic.user", "admin");
         this.password = settings.get("http.basic.password", "admin_pw");
         final boolean whitelistEnabled = settings.getAsBoolean("http.basic.ipwhitelist", true);
-        String [] whitelisted = new String[0];
+        String[] whitelisted = new String[0];
         if (whitelistEnabled) {
             whitelisted = settings.getAsArray("http.basic.ipwhitelist", new String[]{"localhost", "127.0.0.1"});
         }
         this.whitelist = new InetAddressWhitelist(whitelisted);
         this.proxyChains = new ProxyChains(
-            settings.getAsArray(
-              "http.basic.trusted_proxy_chains", new String[]{""}));
+                settings.getAsArray(
+                        "http.basic.trusted_proxy_chains", new String[]{""}));
 
         // for AWS load balancers it is X-Forwarded-For -> hmmh does not work
         this.xForwardHeader = settings.get("http.basic.xforward", "");
@@ -94,8 +96,8 @@ public class HttpBasicServer extends HttpServer {
 
     // @param an http method
     // @returns True iff the method is one of the methods used for health check
-    private boolean isHealthCheckMethod(final RestRequest.Method method){
-        final RestRequest.Method[] healthCheckMethods = { RestRequest.Method.GET, RestRequest.Method.HEAD };
+    private boolean isHealthCheckMethod(final RestRequest.Method method) {
+        final RestRequest.Method[] healthCheckMethods = {RestRequest.Method.GET, RestRequest.Method.HEAD};
         return Arrays.asList(healthCheckMethods).contains(method);
     }
 
@@ -105,41 +107,37 @@ public class HttpBasicServer extends HttpServer {
         return request.path().equals("/") && isHealthCheckMethod(request.method());
     }
 
-  /**
-   *
-   *
-   * @param request
-   * @return true if the request is authorized
-   */
+    /**
+     * @param request
+     * @return true if the request is authorized
+     */
     private boolean authorized(final HttpRequest request) {
-      return allowOptionsForCORS(request) ||
-        authBasic(request) || ipAuthorized(request);
+        return allowOptionsForCORS(request) ||
+                authBasic(request) || ipAuthorized(request);
     }
 
-  /**
-   *
-   *
-   * @param request
-   * @return true iff the client is authorized by ip
-   */
+    /**
+     * @param request
+     * @return true iff the client is authorized by ip
+     */
     private boolean ipAuthorized(final HttpRequest request) {
-      boolean ipAuthorized = false;
-      String xForwardedFor = request.header(xForwardHeader);
-      Client client = new Client(getAddress(request),
-                            whitelist,
-                            new XForwardedFor(xForwardedFor),
-                            proxyChains);
-      ipAuthorized = client.isAuthorized();
-      if (ipAuthorized) {
-        if (log) {
-          String template = "Ip Authorized client: {}";
-          Loggers.getLogger(getClass()).info(template, client);
+        boolean ipAuthorized = false;
+        String xForwardedFor = request.header(xForwardHeader);
+        Client client = new Client(getAddress(request),
+                whitelist,
+                new XForwardedFor(xForwardedFor),
+                proxyChains);
+        ipAuthorized = client.isAuthorized();
+        if (ipAuthorized) {
+            if (log) {
+                String template = "Ip Authorized client: {}";
+                Loggers.getLogger(getClass()).info(template, client);
+            }
+        } else {
+            String template = "Ip Unauthorized client: {}";
+            Loggers.getLogger(getClass()).error(template, client);
         }
-      } else {
-        String template = "Ip Unauthorized client: {}";
-        Loggers.getLogger(getClass()).error(template, client);
-      }
-      return ipAuthorized;
+        return ipAuthorized;
     }
 
     public String getDecoded(HttpRequest request) {
@@ -175,12 +173,10 @@ public class HttpBasicServer extends HttpServer {
     }
 
 
-  /**
-   *
-   *
-   * @param request
-   * @return the IP adress of the direct client
-   */
+    /**
+     * @param request
+     * @return the IP adress of the direct client
+     */
     private InetAddress getAddress(HttpRequest request) {
         return ((InetSocketAddress) request.getRemoteAddress()).getAddress();
     }
@@ -203,25 +199,25 @@ public class HttpBasicServer extends HttpServer {
     }
 
     public void logRequest(final HttpRequest request) {
-      String addr = getAddress(request).getHostAddress();
-      String t = "Authorization:{}, type: {}, Host:{}, Path:{}, {}:{}, Request-IP:{}, " +
-        "Client-IP:{}, X-Client-IP{}";
-      logger.info(t,
-                  request.header("Authorization"),
-                  request.method(),
-                  request.header("Host"),
-                  request.path(),
-                  xForwardHeader,
-                  request.header(xForwardHeader),
-                  addr,
-                  request.header("X-Client-IP"),
-                  request.header("Client-IP"));
+        String addr = getAddress(request).getHostAddress();
+        String t = "Authorization:{}, type: {}, Host:{}, Path:{}, {}:{}, Request-IP:{}, " +
+                "Client-IP:{}, X-Client-IP{}";
+        logger.info(t,
+                request.header("Authorization"),
+                request.method(),
+                request.header("Host"),
+                request.path(),
+                xForwardHeader,
+                request.header(xForwardHeader),
+                addr,
+                request.header("X-Client-IP"),
+                request.header("Client-IP"));
     }
 
     public void logUnAuthorizedRequest(final HttpRequest request) {
         String addr = getAddress(request).getHostAddress();
         String t = "UNAUTHORIZED type:{}, address:{}, path:{}, request:{},"
-          + "content:{}, credentials:{}";
+                + "content:{}, credentials:{}";
         Loggers.getLogger(getClass()).error(t,
                 request.method(), addr, request.path(), request.params(),
                 request.content().toUtf8(), getDecoded(request));

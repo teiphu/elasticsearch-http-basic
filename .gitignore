@@ -3,6 +3,7 @@
 *.zip
 /build/
 /target/
+/.idea/
 *~
 deploy.sh
 .gradle
